@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sinyal Emas XAUUSD</title>
+<meta name="theme-color" content="#0d0e10">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/ikon-192.png">
+<link rel="apple-touch-icon" href="/ikon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0e10; --panel: #15171b; --garis: #272b32;
+    --teks: #ece8df; --redup: #8f8b82;
+    --emas: #d6a94a; --buy: #2fc9ae; --sell: #ff6f61; --netral: #c9c2b0;
+    --warna: var(--redup); /* warna keputusan aktif, diubah lewat data-arah */
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--teks);
+    font: 16px/1.5 "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .halaman { max-width: 1280px; margin: 0 auto; padding: 16px; }
+  header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; padding: 4px 0 16px; }
+  h1 { margin: 0; font: 700 1.25rem/1.2 Fraunces, Georgia, serif; color: var(--emas); }
+  header span { color: var(--redup); font-size: .875rem; }
+
+  /* Mobile: panel keputusan di atas, chart di bawah. Desktop: berdampingan. */
+  .tata { display: grid; gap: 16px; }
+  @media (min-width: 960px) {
+    .tata { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; }
+    .panel { order: 2; position: sticky; top: 16px; }
+    .chart { order: 1; height: calc(100vh - 120px); min-height: 560px; }
+  }
+  .chart { height: 480px; border: 1px solid var(--garis); border-radius: 10px; overflow: hidden; background: var(--panel); }
+  .chart .tradingview-widget-container, .chart .tradingview-widget-container__widget { height: 100%; width: 100%; }
+
+  .panel { background: var(--panel); border: 1px solid var(--garis); border-radius: 10px; padding: 20px; border-top: 3px solid var(--warna); }
+  .panel[data-arah="buy"] { --warna: var(--buy); }
+  .panel[data-arah="sell"] { --warna: var(--sell); }
+  .panel[data-arah="netral"] { --warna: var(--netral); }
+
+  .tf-judul { margin: 0 0 6px; color: var(--redup); font-size: .8125rem; }
+  fieldset { border: 0; margin: 0 0 16px; padding: 0; display: flex; gap: 6px; }
+  fieldset label { flex: 1; }
+  fieldset input { position: absolute; opacity: 0; pointer-events: none; }
+  fieldset span { display: block; text-align: center; padding: 8px 4px; border: 1px solid var(--garis);
+    border-radius: 6px; color: var(--redup); cursor: pointer; font-size: .9rem; font-weight: 500; }
+  fieldset input:checked + span { border-color: var(--emas); color: var(--emas); }
+  fieldset input:focus-visible + span, button:focus-visible { outline: 2px solid var(--emas); outline-offset: 2px; }
+
+  #refresh { width: 100%; padding: 12px; border: 0; border-radius: 6px; background: var(--emas); color: #1a1405;
+    font: 600 1rem "Instrument Sans", system-ui, sans-serif; cursor: pointer; }
+  #refresh:disabled { opacity: .55; cursor: progress; }
+
+  .hasil { margin: 24px 0 8px; }
+  .hasil small { color: var(--redup); font-size: .875rem; }
+  #keputusan { margin: 0; font: 700 clamp(3.25rem, 11vw, 4.75rem)/1 Fraunces, Georgia, serif; letter-spacing: -.01em; color: var(--warna); }
+  .panel[aria-busy="true"] #keputusan { opacity: .45; }
+
+  #galat { display: none; margin: 12px 0 0; padding: 10px 12px; border-radius: 6px; font-size: .9rem;
+    background: rgba(255,111,97,.12); border: 1px solid rgba(255,111,97,.4); color: #ffb3aa; }
+  #galat.tampil { display: block; }
+
+  .bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--garis); margin: 20px 0 10px; }
+  .bar i { display: block; flex: 0 0 auto; width: 0; }
+  .bar .b { background: var(--buy); } .bar .n { background: var(--netral); opacity: .55; } .bar .s { background: var(--sell); }
+  .jumlah { display: flex; justify-content: space-between; margin: 0; padding: 0; list-style: none; }
+  .jumlah li { text-align: center; flex: 1; }
+  .jumlah b { display: block; font-size: 1.5rem; font-weight: 600; }
+  .jumlah span { color: var(--redup); font-size: .8125rem; }
+  .jumlah .b b { color: var(--buy); } .jumlah .s b { color: var(--sell); }
+
+  dl { margin: 20px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; border-top: 1px solid var(--garis); padding-top: 16px; }
+  dt { color: var(--redup); font-size: .8125rem; }
+  dd { margin: 0; font-size: 1.0625rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  dd[data-arah="buy"] { color: var(--buy); } dd[data-arah="sell"] { color: var(--sell); }
+
+  /* Alasan keputusan: tiap aturan diberi titik warna sesuai suaranya */
+  #alasan { list-style: none; margin: 16px 0 0; padding: 16px 0 0; border-top: 1px solid var(--garis); font-size: .875rem; }
+  #alasan li { display: flex; gap: 10px; align-items: baseline; padding: 3px 0; }
+  #alasan li::before { content: ""; flex: 0 0 8px; height: 8px; border-radius: 50%; background: var(--netral); }
+  #alasan li[data-arah="buy"]::before { background: var(--buy); }
+  #alasan li[data-arah="sell"]::before { background: var(--sell); }
+
+  footer { margin-top: 20px; color: var(--redup); font-size: .75rem; max-width: 760px; }
+  @media (prefers-reduced-motion: no-preference) { #keputusan { transition: opacity .2s; } }
+</style>
+</head>
+<body>
+<div class="halaman">
+  <header>
+    <h1>Sinyal Emas XAUUSD</h1>
+    <span>Data harga dari mql5.com</span>
+  </header>
+
+  <main class="tata">
+    <section class="panel" id="panel" data-arah="kosong" aria-busy="false">
+      <p class="tf-judul" id="tf-judul">Timeframe chart</p>
+      <fieldset aria-labelledby="tf-judul">
+        <label><input type="radio" name="tf" value="15m"><span>15 menit</span></label>
+        <label><input type="radio" name="tf" value="1h" checked><span>1 jam</span></label>
+        <label><input type="radio" name="tf" value="4h"><span>4 jam</span></label>
+        <label><input type="radio" name="tf" value="1d"><span>1 hari</span></label>
+      </fieldset>
+      <button id="refresh" type="button">Refresh</button>
+
+      <div class="hasil" aria-live="polite">
+        <small>Keputusan (bias harian)</small>
+        <p id="keputusan">—</p>
+      </div>
+      <p id="galat" role="alert"></p>
+
+      <div class="bar" role="img" aria-label="Proporsi suara buy, netral, sell">
+        <i class="b" id="bar-buy"></i><i class="n" id="bar-netral"></i><i class="s" id="bar-sell"></i>
+      </div>
+      <ul class="jumlah">
+        <li class="b"><b id="n-buy">–</b><span>Buy</span></li>
+        <li><b id="n-netral">–</b><span>Netral</span></li>
+        <li class="s"><b id="n-sell">–</b><span>Sell</span></li>
+      </ul>
+
+      <dl>
+        <div><dt>Harga</dt><dd id="harga">–</dd></div>
+        <div><dt>Hari ini</dt><dd id="perubahan">–</dd></div>
+        <div><dt>Kisaran hari ini</dt><dd id="kisaran">–</dd></div>
+        <div><dt>Diperbarui</dt><dd id="waktu">–</dd></div>
+      </dl>
+
+      <ul id="alasan" aria-label="Alasan keputusan"></ul>
+    </section>
+
+    <section class="chart" id="chart" aria-label="Chart XAUUSD"></section>
+  </main>
+
+  <footer>
+    Keputusan dihitung dari data harian di halaman kuotasi mql5.com (perubahan harian, posisi dalam kisaran, pembukaan, tren sebulan),
+    bukan dari indikator teknikal, dan tidak bergantung pada timeframe chart. Hasil ini bukan saran investasi.
+    Data diambil dengan membaca halaman web publik secara otomatis, sehingga bisa berhenti bekerja kapan saja jika tampilan halamannya berubah atau akses dibatasi.
+  </footer>
+</div>
+
+<script>
+  const LABEL = {
+    STRONG_BUY: ["BUY KUAT", "buy"], BUY: ["BUY", "buy"], NEUTRAL: ["NETRAL", "netral"],
+    SELL: ["SELL", "sell"], STRONG_SELL: ["SELL KUAT", "sell"],
+  };
+  const TV_INTERVAL = { "15m": "15", "1h": "60", "4h": "240", "1d": "D" };
+  const $ = (id) => document.getElementById(id);
+  const tfAktif = () => document.querySelector('input[name="tf"]:checked').value;
+  const angka = (v, d) => v == null ? "–" :
+    new Intl.NumberFormat("id-ID", { minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
+  const fmtJam = new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  });
+
+  // Widget chart resmi TradingView (hanya tampilan chart); dibuat ulang tiap ganti timeframe
+  function gambarChart(tf) {
+    const kotak = document.createElement("div");
+    kotak.className = "tradingview-widget-container";
+    const isi = document.createElement("div");
+    isi.className = "tradingview-widget-container__widget";
+    const skrip = document.createElement("script");
+    skrip.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    skrip.async = true;
+    skrip.textContent = JSON.stringify({
+      autosize: true, symbol: "OANDA:XAUUSD", interval: TV_INTERVAL[tf], timezone: "Asia/Jakarta",
+      theme: "dark", style: "1", locale: "id", backgroundColor: "#15171b",
+      allow_symbol_change: false, calendar: false, support_host: "https://www.tradingview.com",
+    });
+    kotak.append(isi, skrip);
+    $("chart").replaceChildren(kotak);
+  }
+
+  function setMemuat(ya) {
+    $("refresh").disabled = ya;
+    $("refresh").textContent = ya ? "Memuat…" : "Refresh";
+    $("panel").setAttribute("aria-busy", String(ya));
+  }
+  function setBar(buy, netral, sell) {
+    $("bar-buy").style.flexGrow = buy; $("bar-netral").style.flexGrow = netral; $("bar-sell").style.flexGrow = sell;
+    for (const id of ["bar-buy", "bar-netral", "bar-sell"]) $(id).style.width = "auto";
+  }
+
+  function tampilkan(d) {
+    const [teks, arah] = LABEL[d.recommendation];
+    $("panel").dataset.arah = arah;
+    $("keputusan").textContent = teks;
+    $("galat").classList.remove("tampil");
+    const s = d.summary;
+    $("n-buy").textContent = s.buy; $("n-netral").textContent = s.neutral; $("n-sell").textContent = s.sell;
+    setBar(s.buy, s.neutral, s.sell);
+    $("harga").textContent = angka(d.price, 2);
+    const p = d.change_pct;
+    $("perubahan").textContent = p == null ? "–" : (p > 0 ? "+" : "") + angka(p, 2) + "%";
+    $("perubahan").dataset.arah = p > 0 ? "buy" : p < 0 ? "sell" : "";
+    $("kisaran").textContent = angka(d.low, 2) + " – " + angka(d.high, 2);
+    $("waktu").textContent = fmtJam.format(new Date(d.fetched_at)).replace(/\./g, ":") + " WIB";
+    $("alasan").replaceChildren(...d.alasan.map((a) => {
+      const li = document.createElement("li");
+      li.dataset.arah = a.arah;
+      li.textContent = a.teks;
+      return li;
+    }));
+  }
+
+  // Saat gagal, kosongkan hasil lama agar tidak dikira sinyal terbaru
+  function tampilkanGalat(pesan) {
+    $("panel").dataset.arah = "kosong";
+    $("keputusan").textContent = "—";
+    for (const id of ["n-buy", "n-netral", "n-sell", "harga", "perubahan", "kisaran", "waktu"]) $(id).textContent = "–";
+    $("perubahan").dataset.arah = "";
+    setBar(0, 0, 0);
+    $("alasan").replaceChildren();
+    $("galat").textContent = pesan;
+    $("galat").classList.add("tampil");
+  }
+
+  let aktif = null;
+  async function muat() {
+    if (aktif) aktif.abort();
+    const ctrl = (aktif = new AbortController());
+    let habis = false;
+    const batas = setTimeout(() => { habis = true; ctrl.abort(); }, 20000);
+    setMemuat(true);
+    try {
+      const r = await fetch("/api/signal", { signal: ctrl.signal, cache: "no-store" });
+      let data = null;
+      try { data = await r.json(); } catch { /* balasan bukan JSON */ }
+      if (!r.ok) throw new Error((data && data.error) || "Server membalas dengan kode " + r.status + ".");
+      if (!data || !LABEL[data.recommendation] || !Array.isArray(data.alasan)) throw new Error("Data dari server tidak dikenali.");
+      if (aktif === ctrl) tampilkan(data);
+    } catch (e) {
+      if (aktif !== ctrl) return;
+      if (habis) tampilkanGalat("Server tidak merespons dalam 20 detik. Coba Refresh lagi.");
+      else if (e instanceof TypeError) tampilkanGalat("Tidak dapat terhubung ke server. Pastikan server masih berjalan.");
+      else tampilkanGalat(e.message);
+    } finally {
+      clearTimeout(batas);
+      if (aktif === ctrl) { aktif = null; setMemuat(false); }
+    }
+  }
+
+  $("refresh").addEventListener("click", muat);
+  // Timeframe hanya mengubah tampilan chart; keputusan memakai data harian
+  document.querySelectorAll('input[name="tf"]').forEach((el) => el.addEventListener("change", () => gambarChart(el.value)));
+
+  gambarChart(tfAktif());
+  muat(); // analisis otomatis saat halaman dibuka
+</script>
+</body>
+</html>

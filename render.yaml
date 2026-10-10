@@ -1,0 +1,13 @@
+# Konfigurasi Render.com (Blueprint): satu layanan web gratis
+services:
+  - type: web
+    name: sinyal-emas
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # satu worker agar cache 15 detik dipakai bersama; beberapa thread untuk permintaan paralel
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 30
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
